@@ -1,49 +1,52 @@
 CXX=g++
 CXXFLAGS=-Wall -ggdb -Iinclude
-AR=/usr/bin/ar -r 
+AR=/usr/bin/ar -r
 
-srcl := $(shell find . -name "src/lib/*.cpp")
+srcl := $(shell find src/lib -type f -name *.cpp)
 objl := $(subst src, obj, $(srcl:.cpp=.o))
 
-srcc := $(shell find . -name "src/console/*.cpp")
+srcc := $(shell find src/console -type f -name *.cpp)
 objc := $(subst src, obj, $(srcc:.cpp=.o))
 
 .PHONY: directories
 
-all: directories bin/mine-morse.a bin/mine-morse_c 
-	@echo "Compilation complète"
-	@echo "LIB"
-	@echo $(objl)
-	@echo "CONSOLE"
-	@echo $(objc)
-	@echo ""
+all: directories bin/mine-morse.a bin/mine-morse_c
 
 bin/mine-morse_c: ${objc} bin/mine-morse.a
 	@echo "Compilation du programme console"
-	$(CXX) $(CXXFLAGS) $^ -o bin/$@ 
+	$(CXX) $(CXXFLAGS) $^ -o $@ 
+	@echo ""
 
 bin/mine-morse.a: ${objl}
 	@echo "Compilation de la librairie"
-	${AR} bin/$@ $^
+	${AR} $@ $^
+	@echo ""
 
 obj/%.o: src/%.cpp include/%.h
 	@echo "Pré-compilation de $<"
 	$(CXX) $(CXXFLAGS) -o $@ -c $<
+	@echo ""
 
 directories: bin obj
 
 bin:
 	@echo "Création de bin"
 	mkdir -p $@
+	@echo ""
 
 obj:
 	@echo "Création de obj"
 	mkdir -p $@
 	mkdir -p $@/lib
 	mkdir -p $@/console
+	@echo ""
 
+run: bin/mine-morse_c
+	@echo "Programme console\n"
+	@bin/mine-morse_c ${ARGS}
 
 clean: 
-	@echo "Nettoyage"
-	rm -r bin
-	rm -r obj
+	@echo "Nettoyage\n"
+	rm -rf bin
+	rm -rf obj
+	@echo "\nNettoyé"

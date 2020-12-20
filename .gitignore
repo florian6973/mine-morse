@@ -31,5 +31,9 @@
 *.out
 *.app
 
+# Others
+.vscode/
+bin/
+
 # Private ideas
 private/*
