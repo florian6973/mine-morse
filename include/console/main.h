@@ -1,11 +1,10 @@
-#include <iostream>
-
-#include "lib/test.h"
+#include "lib/config.h"
+#include "lib/encoder.h"
+#include "lib/utils.h"
 
 using namespace std;
 using namespace MorseL;
+using namespace MorseL::Utils;
 
-namespace MorseC
-{
-    extern int y;
-}
+int main(int argc, char** argv);
+

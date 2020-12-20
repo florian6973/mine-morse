@@ -12,6 +12,8 @@ objc := $(subst src, obj, $(srcc:.cpp=.o))
 
 all: directories bin/mine-morse.a bin/mine-morse_c
 
+ar: all run
+
 bin/mine-morse_c: ${objc} bin/mine-morse.a
 	@echo "Compilation du programme console"
 	$(CXX) $(CXXFLAGS) $^ -o $@ 
