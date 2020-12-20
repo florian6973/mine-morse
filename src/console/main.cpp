@@ -28,6 +28,7 @@ int main(int argc, char** argv)
 
             //overwrite
             Wav::writefile(argv[0], "test.wav");
+            Wav::readfile(argv[0], "test.wav");
         }
         else
         {

@@ -7,6 +7,7 @@
 #include <fstream>
 #include <iomanip>
 #include <cmath>
+#include <cstring>
 
 using namespace std;
 
@@ -110,5 +111,60 @@ void MorseL::Wav::writefile(char* exec, const string& filepath)
     f.close();
 
     cout << "fichier écrit " << path << endl;
+    cout << (file_length - 8) << endl;
+}
 
+/*void endian_swap(unsigned int& x)
+{
+    x = (x>>24) | 
+        ((x<<8) & 0x00FF0000) |
+        ((x>>8) & 0x0000FF00) |
+        (x<<24);
+}*/
+
+/*int buffToInteger(vector<char> buffer)
+{
+    int a = static_cast<int>(static_cast<unsigned char>(buffer[0]) << 24 |
+        static_cast<unsigned char>(buffer[1]) << 16 | 
+        static_cast<unsigned char>(buffer[2]) << 8 | 
+        static_cast<unsigned char>(buffer[3]));
+    return a;
+}*/
+
+void MorseL::Wav::readfile(char* exec, const string& filepath)
+{
+    string path = Utils::get_path(string(exec), filepath); // à changer ancien
+    
+    //unsigned short array[2]={ox20ac,0x20bc};
+// End of RAII block. This will close the stream.
+    std::ifstream inFile;
+    //uint64_t myuint = 0xFFFF;
+    inFile.open(path, ios::binary|ios::ate); // sans ate segmentation fault ?
+    cout << "test" << endl;
+
+    ifstream::pos_type pos = inFile.tellg();
+    std::vector<char>  result(pos);
+    cout << "test" << endl;
+
+    inFile.seekg(0, ios::beg);
+    inFile.read(&result[0], pos);
+    if (inFile)
+      std::cout << "all characters read successfully.";
+    else
+      std::cout << "error: only " << inFile.gcount() << " could be read"  ;
+
+    cout << "test" << endl;
+
+    inFile.close();
+    for (int i = 0; i < 8; i++)
+      cout << result[i];
+    cout << endl;
+    vector<char> fsize;
+    for (int i = 4; i < 8; i++)
+      fsize.push_back(result[i]);
+    int a = 0;
+    memcpy( &a, fsize.data(), sizeof( int ) );
+
+    cout << a << endl;
+    //cout << endian_swap(buffToInteger(fsize)) << endl;
 }

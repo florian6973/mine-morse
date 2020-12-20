@@ -5,5 +5,5 @@ Projet de codage et décodage de MORSE dans le cadre de l'UE12.
 - g++ 9.3.0
 - Ubuntu 20.04
 
-- make allr
+- make ar
 - make clean
