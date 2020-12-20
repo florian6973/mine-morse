@@ -6,6 +6,9 @@
 #include <iostream>
 #include <exception>
 
+MorseL::Config::Config()
+{}
+
 MorseL::Config::Config(char* exec, string file) : _file(Utils::get_path(string(exec), file))
 { cout << "Fichier de configuration : " << _file << endl;}
 
@@ -32,7 +35,9 @@ void MorseL::Config::read()
 
             //cout << name << " " << value << endl;
 
-            data["name"] = value;
+            data_e[name] = value;
+            data_d[value] = name;
+            //data.insert(pair<string, string>(name, value));
         }
 
         cFile.close();

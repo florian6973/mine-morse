@@ -1,5 +1,8 @@
+#pragma once
+
 #include <ostream>
 #include <string>
+#include <vector>
 
 using namespace std;
 
@@ -31,6 +34,8 @@ namespace MorseL::Utils {
     string string_replace( string src, string const& target, string const& repl);
 
     string get_path(const string& base, const string& file);
+
+    vector<string> split(const string& src, const string& delim);
 }
 
 //si ne change que .h sans .cpp associé ne recompile pas ?

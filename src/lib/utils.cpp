@@ -32,3 +32,21 @@ string MorseL::Utils::string_replace( string src, string const& target, string c
 
     return src;
 }
+
+vector<string> MorseL::Utils::split(const string& src, const string& delim)
+{
+    string ch = src;
+    vector<string> exit = {};
+
+    size_t pos = 0;
+    std::string token;
+    while ((pos = ch.find(delim)) != std::string::npos) {
+        token = ch.substr(0, pos);
+
+        exit.push_back(token);
+
+        ch.erase(0, pos + delim.length());
+    }
+    exit.push_back(ch);
+    return exit;
+}

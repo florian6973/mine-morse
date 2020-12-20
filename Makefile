@@ -1,5 +1,5 @@
 CXX=g++
-CXXFLAGS=-Wall -ggdb -Iinclude
+CXXFLAGS=-std=c++2a -Wall -ggdb -Iinclude
 AR=/usr/bin/ar -r
 
 srcl := $(shell find src/lib -type f -name *.cpp)
@@ -45,7 +45,7 @@ obj:
 
 run: bin/mine-morse_c
 	@echo "Programme console\n"
-	@bin/mine-morse_c ${ARGS}
+	@bin/mine-morse_c $(ARGS)
 
 clean: 
 	@echo "Nettoyage\n"

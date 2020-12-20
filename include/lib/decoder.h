@@ -5,13 +5,13 @@
 
 namespace MorseL
 {
-    class Encoder
+    class Decoder
     {
     public:
-        Encoder(Config cfg);
-        ~Encoder();
+        Decoder(Config cfg);
+        ~Decoder();
 
-        string encode(const string& str);
+        string decode(const string& str);
     private:
         Config _cfg;
     };
