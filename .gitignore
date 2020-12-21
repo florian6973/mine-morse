@@ -34,6 +34,8 @@
 # Others
 .vscode/
 bin/
+test/str*.wav
+test/str*_d.txt
 
 # Private ideas
 private/*
