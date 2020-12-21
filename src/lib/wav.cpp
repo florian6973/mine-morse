@@ -8,6 +8,8 @@
 #include <iomanip>
 #include <cmath>
 #include <cstring>
+#include <vector>
+#include <algorithm>
 
 using namespace std;
 
@@ -33,7 +35,31 @@ namespace little_endian_io
 }
 using namespace little_endian_io;
 
-void MorseL::Wav::writefile(char* exec, const string& filepath)
+
+void write(ostream& f, bool vide, double seconds, int hz, int bps)
+{
+  constexpr double two_pi = 6.283185307179586476925286766559;
+  double max_amplitude = pow(2,bps - 1 );  // "volume"
+  double frequency = 400*2;  // A
+
+  int N = hz * seconds;  // total number of samples
+  for (int n = 0; n < N; n++)
+  {
+    if (vide)
+      write_word( f, 0, bps/8 ); // problème of size
+    else
+    {
+      double amplitude = (double)n / N * max_amplitude;
+      double value     = sin( (two_pi * n * frequency) / hz );
+      write_word( f, (int)(amplitude  * value), bps/8 ); // problème of size
+    }
+    //write_word( f, (int)((max_amplitude - amplitude) * value), 2 );
+
+    //write_word( f, (int)max_amplitude-1, bps/8 ); // problème of size
+  }
+}
+
+void MorseL::Wav::writefile(char* exec, const string& filepath, const string& msg, const int& wpm)
 {
     string path = Utils::get_path(string(exec), filepath); // à changer ancien
     
@@ -62,39 +88,42 @@ void MorseL::Wav::writefile(char* exec, const string& filepath)
   
   // Write the audio samples
   // (We'll generate a single C4 note with a sine wave, fading from left to right)
-  constexpr double two_pi = 6.283185307179586476925286766559;
-  double max_amplitude = pow(2,bps - 1 );  // "volume"
    // samples per second
-  double frequency = 400*2;  // A
-  double seconds   = 2;      // time
 
-  int N = hz * seconds;  // total number of samples
-  for (int n = 0; n < N; n++)
-  {
-    double amplitude = (double)n / N * max_amplitude;
-    double value     = sin( (two_pi * n * frequency) / hz );
-    write_word( f, (int)(                 amplitude  * value), bps/8 ); // problème of size
-    //write_word( f, (int)((max_amplitude - amplitude) * value), 2 );
+   double d_ti = 60.0/((double)wpm*50.0); //mot PARIS et non CODEX (60) //pourquoi 1200 ?
+  //cout << d_ti << endl;
+bool wordprec = false;
+ for(long unsigned int i = 0; i<msg.length(); i++) {
+      //cout << msg.at(i) << endl; //get character at position i
+      //cout << msg.at(i);
+      switch (msg.at(i))
+      {
+        case '.':
+          if (wordprec)
+            write(f, true, d_ti, hz, bps);
+          write(f, false, d_ti, hz, bps);
+          wordprec = true;
+          break;
+        case '-':
+          if (wordprec)
+            write(f, true, d_ti, hz, bps);
+          write(f, false, 3*d_ti, hz, bps);
+          wordprec = true;
+          break;
+        case ' ':
+          write(f, true, 3*d_ti, hz, bps);
+          wordprec = false;
+          break;
+        case '/':
+          write(f, true, 7*d_ti, hz, bps);
+          wordprec = false;
+          break;
+        default:
+          throw runtime_error("Code inconnu !");
+      }
+   }
 
-    //write_word( f, (int)max_amplitude-1, bps/8 ); // problème of size
-  }
-  N = hz * seconds;  // total number of samplesotal number of samples
-  for (int n = 0; n < N; n++)
-  {
-    //double amplitude = (double)n / N * max_amplitude;
-    //double value     = sin( (two_pi * n * frequency) / hz );
-    write_word( f, 0, bps/8 ); // problème of size
-    //write_word( f, (int)((max_amplitude - amplitude) * value), 2 );
-  }
-  N = hz * seconds;  // total number of samples
-  for (int n = 0; n < N; n++)
-  {
-    double amplitude = (double)n / N * max_amplitude;
-    double value     = sin( (two_pi * n * frequency) / hz );
-    write_word( f, (int)(                 amplitude  * value), bps/8 ); // problème of size
-    //write_word( f, (int)((max_amplitude - amplitude) * value), 2 );
-    //write_word( f, (int)max_amplitude-1, bps/8 ); // problème of size
-  }
+
   
   // (We'll need the final file size to fix the chunk sizes above)
   size_t file_length = f.tellp();
@@ -110,8 +139,9 @@ void MorseL::Wav::writefile(char* exec, const string& filepath)
 
     f.close();
 
-    cout << "fichier écrit " << path << endl;
     cout << (file_length - 8) << endl;
+    cout << (file_length - data_chunk_pos + 8) << endl;
+    cout << "fichier écrit " << path << endl;
 }
 
 /*void endian_swap(unsigned int& x)
@@ -131,7 +161,38 @@ void MorseL::Wav::writefile(char* exec, const string& filepath)
     return a;
 }*/
 
-void MorseL::Wav::readfile(char* exec, const string& filepath)
+int read_int(const vector<char>& vec, int r, const int size)
+{
+    vector<char> fsize;
+    for (int i = r; i < (r+size); i++)
+      fsize.push_back(vec[i]);
+    int a = 0;
+    memcpy( &a, fsize.data(), sizeof( int ) );
+    return a;
+}
+
+/*int read_int(const vector<char>& vec, int r, const int size)
+{
+    vector<char> buffer;
+    for (int i = r; i < (r+size); i++)
+      buffer.push_back(vec[i]);
+    int a = 0;
+    if (size == 4)
+    {
+    a = static_cast<int>(static_cast<unsigned char>(buffer[0]) << 24 |
+        static_cast<unsigned char>(buffer[1]) << 16 | 
+        static_cast<unsigned char>(buffer[2]) << 8 | 
+        static_cast<unsigned char>(buffer[3]));
+    }
+    else if (size == 2)
+    {
+    a = static_cast<int>(static_cast<unsigned char>(buffer[0]) << 8 | 
+        static_cast<unsigned char>(buffer[1]));
+    }
+    return a;
+}*/
+
+string MorseL::Wav::readfile(char* exec, const string& filepath)
 {
     string path = Utils::get_path(string(exec), filepath); // à changer ancien
     
@@ -139,13 +200,17 @@ void MorseL::Wav::readfile(char* exec, const string& filepath)
 // End of RAII block. This will close the stream.
     std::ifstream inFile;
     //uint64_t myuint = 0xFFFF;
-    inFile.open(path, ios::binary|ios::ate); // sans ate segmentation fault ?
-    cout << "test" << endl;
-
+    inFile.open(path, std::ios::in|ios::binary|ios::ate); // sans ate segmentation fault ?
+    inFile.unsetf(std::ios::skipws);
+if (!inFile)
+{
+  throw runtime_error("Ne peut pas lire");
+}
+    inFile.seekg(0, std::ios::end);
     ifstream::pos_type pos = inFile.tellg();
     std::vector<char>  result(pos);
-    cout << "test" << endl;
 
+    //std::vector<unsigned char> result(std::istreambuf_iterator<char>(inFile), {});
     inFile.seekg(0, ios::beg);
     inFile.read(&result[0], pos);
     if (inFile)
@@ -153,18 +218,104 @@ void MorseL::Wav::readfile(char* exec, const string& filepath)
     else
       std::cout << "error: only " << inFile.gcount() << " could be read"  ;
 
-    cout << "test" << endl;
 
     inFile.close();
-    for (int i = 0; i < 8; i++)
-      cout << result[i];
-    cout << endl;
-    vector<char> fsize;
-    for (int i = 4; i < 8; i++)
-      fsize.push_back(result[i]);
-    int a = 0;
-    memcpy( &a, fsize.data(), sizeof( int ) );
+    //for (int i = 0; i < 8; i++)
+    //  cout << result[i];
+    //cout << endl;
 
-    cout << a << endl;
+    int fsize = read_int(result, 4, 4);
+    int audformat = read_int(result, 20, 2);
+    int nbrcan = read_int(result, 22, 2);
+    int freq = read_int(result, 24, 4);
+    int bpsec = read_int(result, 28, 4);
+    int bpp = read_int(result, 32, 2);
+    int bpsample = read_int(result, 34, 2);
+    int datasize = read_int(result, 40, 4);
+    cout << fsize << " " << audformat << " " << nbrcan << " " << freq << " " << freq << " " << bpsec << " " << bpp << " " << bpsample << " " << datasize << endl;
+    
+    //chercher temps entre 0...
+    //commence à 44
+    int delta = 44;
+    int nbz = 0;
+    bool write = false;
+    int incr = bpsample/8;
+
+    double duration = (double)result.size()/(double)incr/(double)freq;
+
+    vector<vector<double>> tzero = {};
+
+    for (int i = delta; i < result.size(); i+=incr)
+    {
+        int z = read_int(result, i, 2);
+
+        double tps = (double)nbz/(double)freq;
+
+        if (tps > (double)2/(freq)) // deux périodes sinon critère de Shannon !
+        { 
+          write = true;
+        }
+
+        if (z==0)
+        {
+          nbz++;
+        }
+        else
+        {
+          nbz=0;//800 hz : période 1/800*
+          if (write)
+          {
+            double curtps = (double)i/(double)incr/(double)freq;
+            //cout << tps << endl;
+            //cout << curtps << endl;
+            //cout << endl;
+            tzero.push_back({tps, curtps }); //bug avec pair ??
+            write = false;
+          }
+        }
+    }
+    //tzero.push_back({0, (double)result.size()/(double)incr/(double)freq }); 
+    //le dernier mettre des zéros ?    
+
+    //cout << tzero.size() << endl;
+
+    double ti = (*std::min_element(begin(tzero), end(tzero), [](auto lhs, auto rhs) {
+  return lhs[0] < rhs[0];
+}))[0];
+    cout << "base duration" << ti << endl;
+    //cout << ti << endl;
+
+    vector<int> morse = {};
+    double tlast = 0;
+    for (int i = 0; i < tzero.size(); i++)
+    {
+      morse.push_back(round((tzero[i][1]-tzero[i][0]-tlast)/ti));
+      morse.push_back(-round((tzero[i][0])/ti));
+      tlast = tzero[i][1];
+    }
+    //ajout dernière lettre
+    morse.push_back(round((duration-tlast)/ti));
+
+    string output = "";
+    for (int i = 0; i < morse.size(); i++)
+    {
+      switch (morse[i])
+      {
+          case 1:
+          output.append(".");
+          break;
+          case 3:
+          output.append("-");
+          break;
+          case -3:
+          output.append(" ");
+          break;
+          case -7:
+          output.append("/");
+          break;
+      }
+    }
+    cout << output << endl;
+    return output;
     //cout << endian_swap(buffToInteger(fsize)) << endl;
 }

@@ -27,8 +27,19 @@ int main(int argc, char** argv)
             cout << de << endl; //new line = new paragraphe !
 
             //overwrite
-            Wav::writefile(argv[0], "test.wav");
-            Wav::readfile(argv[0], "test.wav");
+            Wav::writefile(argv[0], "test.wav", en, 20);
+            string en2 = Wav::readfile(argv[0], "test.wav");
+            string de2 = dcd.decode(en2);
+            cout << de2 << endl; 
+
+            
+            en2 = Wav::readfile(argv[0], "sample2.wav");
+            de2 = dcd.decode(en2);
+            cout << de2 << endl;
+
+            en2 = Wav::readfile(argv[0], "sample.wav");
+            de2 = dcd.decode(en2);
+            cout << de2 << endl; 
         }
         else
         {

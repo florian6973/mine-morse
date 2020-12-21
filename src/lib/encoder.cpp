@@ -42,7 +42,7 @@ string MorseL::Encoder::encode(const string& str)
                 output.append("/ ");
             }
             else
-                throw runtime_error("Caractère non trouvé !"); //TODO bonne exception
+                throw runtime_error("Caractère " + its + " non trouvé !"); //TODO bonne exception
         } 
         else 
         {
