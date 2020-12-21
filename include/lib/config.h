@@ -1,4 +1,4 @@
-#pragma once //compiled only once
+#pragma once // compiled only once
 
 #include <string>
 #include <map>
@@ -16,6 +16,7 @@ namespace MorseL
 
             map<string, string> data_e = {};
             map<string, string> data_d = {};
+            map<string, int> wav = {};
 
             bool enc = false;
             string prog = "";

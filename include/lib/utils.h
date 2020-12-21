@@ -6,8 +6,10 @@
 
 using namespace std;
 
-namespace MorseL::Color {
-    enum Code {
+namespace MorseL::Color
+{
+    enum Code
+    {
         FG_RED      = 31,
         FG_GREEN    = 32,
         FG_BLUE     = 34,
@@ -18,24 +20,25 @@ namespace MorseL::Color {
         BG_DEFAULT  = 49
     };
 
-    class Modifier {
+    class Modifier
+    {
         Code code;
     public:
         Modifier(Code pCode) : code(pCode) {}
-        friend std::ostream&
-        operator<<(std::ostream& os, const Modifier& mod) {
+
+        friend std::ostream& operator<<(std::ostream& os, const Modifier& mod)
+        {
             return os << "\033[" << mod.code << "m";
         }
     };
 
 }
-namespace MorseL::Utils {    
 
-    string string_replace( string src, string const& target, string const& repl);
+namespace MorseL::Utils
+{    
+    string string_replace(string src, string const& target, string const& repl);
 
     string get_path(const string& base, const string& file);
 
     vector<string> split(const string& src, const string& delim);
 }
-
-//si ne change que .h sans .cpp associé ne recompile pas ?

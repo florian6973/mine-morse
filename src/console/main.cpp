@@ -32,12 +32,10 @@ void MorseC::init_config(Config& conf, int argc, char** argv)
     if (argc == 4)
         conf.output = string(argv[3]);
 
-    conf.read("config.mm"); // Unix dependent , TODO tester sous windows ! // cin usage ?, graphe
+    conf.read("config.mm");
 
     cout << conf.prog << " : " << green << type << def << " de '" << green << conf.input << def << "' vers '" << green << conf.output << def << "'" << endl;
 }
-
-// perte majuscule
 
 void MorseC::morse_trad(Config& conf)
 {
@@ -64,6 +62,7 @@ void MorseC::morse_trad(Config& conf)
             ofstream out(conf.output);
             out << str;
             out.close();
+            
             cout << "Fichier écrit : " << conf.output << endl;
         }      
     }

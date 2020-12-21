@@ -10,6 +10,9 @@
 MorseL::Config::Config()
 {}
 
+MorseL::Config::~Config()
+{}
+
 void MorseL::Config::read(string file)
 {
     string _file = Utils::get_path(prog, file);
@@ -32,9 +35,19 @@ void MorseL::Config::read(string file)
             auto name = line.substr(0, delimiterPos);
             auto value = line.substr(delimiterPos + delimiter.length());
 
-            data_e[name] = value;
-            data_d[value] = name;
+            if (name.rfind("wav.", 0) == 0)
+                wav[name] = stoi(value);
+            else
+            {
+                if (wav["wav.debug"])
+                    cout << name << " = " << value << " ; "; 
+
+                data_e[name] = value;
+                data_d[value] = name;
+            }            
         }
+        if (wav["wav.debug"])
+            cout << endl;
 
         cFile.close();
     }
@@ -43,5 +56,3 @@ void MorseL::Config::read(string file)
         throw runtime_error("Impossible d'ouvrir le fichier de configuration '" + _file + "' !");
     }
 }
-MorseL::Config::~Config()
-{}

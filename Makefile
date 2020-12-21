@@ -1,5 +1,6 @@
 CXX=g++
-CXXFLAGS=-std=c++2a -Wall -ggdb -Iinclude
+CXXFLAGS=-std=c++2a -Wall -O3 -Iinclude
+CXXFLAGSDEBUG=-std=c++2a -Wall -ggdb -Iinclude
 AR=/usr/bin/ar -r
 
 srcl := $(shell find src/lib -type f -name *.cpp)
@@ -43,12 +44,31 @@ obj:
 	mkdir -p $@/console
 	@echo ""
 
-run: bin/mine-morse_c
-	@echo "Programme console\n"
-	@bin/mine-morse_c $(ARGS)
-
 clean: 
 	@echo "Nettoyage\n"
 	rm -rf bin
 	rm -rf obj
+	rm -rf test/str*.wav
+	rm -rf test/str*_d.txt
 	@echo "\nNettoyé"
+
+test:
+	@echo "Tests du programme\n"
+	@echo "\tTest d'encodage/décodage local\n"
+	bin/mine-morse_c enc test/str04.txt test/str01.wav
+	bin/mine-morse_c dec test/str01.wav test/str01_d.txt
+	bin/mine-morse_c enc test/str02.txt test/str02.wav
+	bin/mine-morse_c dec test/str02.wav test/str02_d.txt
+	@echo "\tAutre type de passage de paramètres\n"
+	bin/mine-morse_c enc "Argument en ligne de commande" test/str03.wav
+	bin/mine-morse_c dec test/str03.wav
+	
+	@echo "\tTest de décodage de MORSE généré en ligne\n"
+	bin/mine-morse_c dec test/site01_a.wav
+	bin/mine-morse_c dec test/site01_b.wav
+	bin/mine-morse_c dec test/site02_a.wav
+	bin/mine-morse_c dec test/site02_b.wav
+	bin/mine-morse_c dec test/site03_a.wav
+	bin/mine-morse_c dec test/site03_b.wav
+
+	@echo "\tVous pouvez essayer de décoder un fichier généré par ce programme à l'aide d'un site web (lien dans le README.md), par exemple avec test/str02.wav"

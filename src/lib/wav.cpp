@@ -13,234 +13,127 @@
 #include <iterator>
 
 using namespace std;
+using namespace MorseL;
 
-template< typename T >
-std::string int_to_hex( T i )
+template <typename Word>
+std::ostream& MorseL::Wav::write_word(std::ostream& outs, Word value, unsigned size)
 {
-  std::stringstream stream;
-  stream << "" 
-         << std::setfill ('0') << std::setw(sizeof(T)*2) 
-         << std::hex << i;
-  return stream.str();
-}
-
-namespace little_endian_io
-{
-  std::vector<unsigned char> intToBytes(int value, int size)
-{
-    std::vector<unsigned char> result;
-
-    for (int i = 2*size; i > 0; i--)
-    {
-      if (i != 1)
-      result.push_back((value >> 8*i) & 0xFF);
-      else
-      {
-        result.push_back(value & 0xFF);
-      }
-      
-    }
-    /*if (size <= 2)
-    {
-    result.push_back(value >> 24);
-    result.push_back(value >> 16);
-    if (size <= 1)
-    {
-    result.push_back(value >>  8);
-    result.push_back(value      );
-    }
-    }
-    else
-    throw runtime_error("Entier " + to_string(size) + " non prévu");*/
-    return result;
-}
-  template <typename Word>
-  std::ostream& write_word( std::ostream& outs, Word value, unsigned size = sizeof( Word ) ) // only int
-  {
     char* a_begin = reinterpret_cast<char*>(&value);
     char* a_end = a_begin + size;
 
-    //cout << size << "-" << value <<endl;
-
     vector<char> chars;
-
     copy(a_begin, a_end, back_inserter(chars));
-
-    //copy(chars.begin(), chars.end(), ostream_iterator<int>(cout, ", "));
 
     for (long unsigned int i = 0; i < chars.size(); i++)
       outs.write(&chars[i], sizeof(char));
 
-    //unsigned char* array = intToBytes(value, size).data();
-    //outs.write((char *)&array[0], sizeof(array));
-    
-    //for (; size; --size, value >>= 8)
-    //  outs.put( static_cast <char> (value & 0xFF) );
     return outs;
-  }
 }
-using namespace little_endian_io;
 
-
-void write(ostream& f, bool vide, double seconds, int hz, int bps)
+void MorseL::Wav::write_motif(ostream& f, const bool& vide, const double& seconds, const WavInfo& wvi)
 {
-  constexpr double two_pi = 6.283185307179586476925286766559;
-  double max_amplitude = pow(2,bps - 1 );  // "volume"
-  double frequency = 400;  // A
-
-  int N = hz * seconds;  // total number of samples
-  for (int n = 0; n < N; n++)
-  {
-    if (vide)
-      write_word( f, 0, bps/8 ); // problème of size
-    else
+    int N = wvi.hz * seconds;
+    for (int n = 0; n < N; n++)
     {
-      double amplitude = (double)n / N * max_amplitude; //pourquoi ça ?
-      //double amplitude = max_amplitude;
-      double value     = cos( (two_pi * n * frequency) / hz );
-      //cout << "writing" << (int)(amplitude  * value) << endl;
-      write_word( f, (int)(amplitude  * value), bps/8 ); // problème of size
+        if (vide)
+            write_word(f, 0, wvi.nbbytes);
+        else
+        {
+            double amplitude = (double)n / N * wvi.max_ampl;
+            double value = sin((two_pi * n * wvi.freq) / wvi.hz);
+            write_word(f, (int)(amplitude  * value), wvi.nbbytes);
+        }
     }
-    //write_word( f, (int)((max_amplitude - amplitude) * value), 2 );
-
-    //write_word( f, (int)max_amplitude-1, bps/8 ); // problème of size
-  }
 }
-
-// peut être décodé en ligne
 
 void MorseL::Wav::write_file(Config& cfg, const string& msg)
 {
-    //string path = Utils::get_path(string(exec), filepath); // à changer ancien
-    int wpm=20;
     string fpath = cfg.output;
     if (fpath == "")
-      throw runtime_error("Un fichier de sortie (.wav) doit être spécifié !");
+        throw runtime_error("Un fichier de sortie (.wav) doit être spécifié !");
     
-    //unsigned short array[2]={ox20ac,0x20bc};
-// End of RAII block. This will close the stream.
     std::fstream f;
-    //uint64_t myuint = 0xFFFF;
     f.open(fpath, ios::in | ios::out | ios::binary | ios:: trunc);
 
-   int nbbytes=  2;
-  int hz        = 11050; //baisser qualité ?
-  int bps = nbbytes*8; // multiple de 8
-  int nbchan = 1; //seulement une chaine prévue
-  f << "RIFF----WAVEfmt ";     // (chunk size to be filled in later)
-  write_word( f,     16, 4 );  // no extension data
-  write_word( f,      1, 2 );  // PCM - integer samples
-  write_word( f,      nbchan, 2 );  // two channels (stereo file)
-  write_word( f,  hz, 4 );  // samples per second (Hz)
-  write_word( f, hz*nbchan*bps/8, 4 );  
-  write_word( f,      nbchan*bps/8, 2 );  // data block size (size of two integer samples, one for each channel, in bytes)
-  write_word( f,     bps, 2 );  // number of bits per sample (use a multiple of 8)
+    WavInfo wvi;
+    wvi.nbbytes = cfg.wav["wav.bps_o"];
+    wvi.hz = cfg.wav["wav.hz"];
+    int bps = wvi.nbbytes*8;
+    int nbchan = 1; // seulement une channel prévue (pas stéréo)
+    wvi.freq = cfg.wav["wav.freq"];
+      
+    f << "RIFF----WAVEfmt "; // (chunk size to be filled in later)
+    write_word(f, 16, 4);
+    write_word(f, 1, 2);
+    write_word(f, nbchan, 2);
+    write_word(f, wvi.hz, 4);
+    write_word(f, wvi.hz*nbchan*bps/8, 4);  
+    write_word(f, nbchan*bps/8, 2);
+    write_word(f, bps, 2);
 
-  // Write the data chunk header
-  size_t data_chunk_pos = f.tellp();
-  f << "data----";  // (chunk size to be filled in later)
+    size_t data_chunk_pos = f.tellp();
+    f << "data----";  // (chunk size to be filled in later) 
+
+    double d_ti = 60.0/((double)cfg.wav["wav.wpm"]*50.0); // convention mot PARIS pour WPM
+    wvi.max_ampl = pow(2, bps - 1);  // "volume"
+
+    bool wordprec = false; // pour savoir s'il faut mettre un espace inter-lettres
+    for(long unsigned int i = 0; i<msg.length(); i++)
+    {
+        switch (msg.at(i))
+        {
+            case '.':
+                if (wordprec)
+                    write_motif(f, true, cfg.wav["wav.espaceinter"]*d_ti, wvi);
+
+                write_motif(f, false, cfg.wav["wav.ti"]*d_ti, wvi);
+                wordprec = true;
+                break;
+            case '-':
+                if (wordprec)
+                    write_motif(f, true, cfg.wav["wav.espaceinter"]*d_ti, wvi);
+
+                write_motif(f, false, cfg.wav["wav.ta"]*d_ti, wvi);
+                wordprec = true;
+                break;
+            case ' ':
+                write_motif(f, true, cfg.wav["wav.espacelettre"]*d_ti, wvi);
+                wordprec = false;
+                break;
+            case '/':
+                write_motif(f, true, cfg.wav["wav.espacemot"]*d_ti, wvi);
+                wordprec = false;
+                break;
+            default:
+                throw runtime_error("Code inconnu !");
+        }
+    }
   
-  // Write the audio samples
-  // (We'll generate a single C4 note with a sine wave, fading from left to right)
-   // samples per second
-
-   double d_ti = 60.0/((double)wpm*50.0); //mot PARIS et non CODEX (60) //pourquoi 1200 ?
-  //cout << d_ti << endl;
-bool wordprec = false;
-          //write(f, true, d_ti, hz, bps);
- for(long unsigned int i = 0; i<msg.length(); i++) {
-      //cout << msg.at(i) << endl; //get character at position i
-      //cout << msg.at(i);
-      switch (msg.at(i))
-      {
-        case '.':
-          if (wordprec)
-            write(f, true, d_ti, hz, bps);
-          write(f, false, d_ti, hz, bps);
-          wordprec = true;
-          break;
-        case '-':
-          if (wordprec)
-            write(f, true, d_ti, hz, bps);
-          write(f, false, 3*d_ti, hz, bps);
-          wordprec = true;
-          break;
-        case ' ':
-          write(f, true, 3*d_ti, hz, bps);
-          wordprec = false;
-          break;
-        case '/':
-          write(f, true, 7*d_ti, hz, bps);
-          wordprec = false;
-          break;
-        default:
-          throw runtime_error("Code inconnu !");
-      }
-   }
-
-
-  
-  // (We'll need the final file size to fix the chunk sizes above)
-  size_t file_length = f.tellp();
-
-  // Fix the data chunk header to contain the data size
-  f.seekp( data_chunk_pos + 4 );
-  write_word( f, /*N*nbchan*bps-44*/ (file_length - data_chunk_pos + 8), 4 );
-
-  // Fix the file header to contain the proper RIFF chunk size, which is (file size - 8) bytes
-  f.seekp( 0 + 4 );
-  write_word( f,  /*N*nbchan*bps-8*/(file_length - 8), 4 ); 
-
+    // Fix the data chunk header to contain the data size
+    size_t file_length = f.tellp();
+    f.seekp(data_chunk_pos + 4);
+    write_word(f, (file_length - data_chunk_pos + 8), 4);
+    f.seekp(4);
+    write_word(f, (file_length - 8), 4); 
 
     f.close();
-
-    //cout << (file_length - 8) << endl;
-    //cout << (file_length - data_chunk_pos + 8) << endl;
-    //cout << "fichier écrit " << path << endl;
-}
-
-/*void endian_swap(unsigned int& x)
-{
-    x = (x>>24) | 
-        ((x<<8) & 0x00FF0000) |
-        ((x>>8) & 0x0000FF00) |
-        (x<<24);
-}*/
-
-/*int buffToInteger(vector<char> buffer)
-{
-    int a = static_cast<int>(static_cast<unsigned char>(buffer[0]) << 24 |
-        static_cast<unsigned char>(buffer[1]) << 16 | 
-        static_cast<unsigned char>(buffer[2]) << 8 | 
-        static_cast<unsigned char>(buffer[3]));
-    return a;
-}*/
-
-int read_int(const vector<char>& vec, int r, const int size)
-{
-    vector<char> fsize;
-    for (int i = r; i < (r+size); i++)
-      fsize.push_back(vec[i]);
-    int a = 0;
-    memcpy( &a, fsize.data(), sizeof( int ) );
-    return a;
 }
 
 template <typename T>
-T extract(const vector<unsigned char> &v, int pos)
+T MorseL::Wav::extract(const vector<unsigned char> &v, int pos)
 {
-  T value;
-  memcpy(&value, &v[pos], sizeof(T));
-  return value;
+    T value;
+    memcpy(&value, &v[pos], sizeof(T));
+    return value;
 }
 
-int read_int(const vector<unsigned char>& vec, int r, const int size)
+int MorseL::Wav::read_int(const vector<unsigned char>& vec, int pos, const int size)
 {
     vector<unsigned char> buffer;
-    for (int i = r; i < (r+size); i++)
+    for (int i = pos; i < (pos+size); i++)
       buffer.push_back(vec[i]);
     int a = 0;
-    //int a = *reinterpret_cast<const uint16_t*>(&buffer[0]);
+
     switch (size)
     {
       case 1:
@@ -255,171 +148,127 @@ int read_int(const vector<unsigned char>& vec, int r, const int size)
       default:
         throw runtime_error("Taille de bloc non prise en compte");
     }
+
     return a;
 }
 
-/*int read_int(const vector<BYTE>& vec, int r, const int size)
+vector<BYTE> MorseL::Wav::readFile(const string& filename)
 {
-    vector<char> fsize;
-    for (int i = r; i < (r+size); i++)
-      fsize.push_back(vec[i]);
-    int a = 0;
-    memcpy( &a, fsize.data(), sizeof( int ) );
-    return a;
-}*/
-
-typedef unsigned char BYTE;
-
-std::vector<BYTE> readFile(const string& filename)
-{
-    // open the file:
     std::streampos fileSize;
-    std::ifstream file(filename, std::ios::binary | std::ios::ate);
+    std::ifstream file(filename, ios::binary | ios::ate);
 
-    // get its size:
-    file.seekg(0, std::ios::end);
+    file.seekg(0, ios::end);
     fileSize = file.tellg();
-    file.seekg(0, std::ios::beg);
+    file.seekg(0, ios::beg);
 
-    // read the data:
-    std::vector<BYTE> fileData(fileSize);
+    vector<BYTE> fileData(fileSize);
     file.read((char*) &fileData[0], fileSize);
     return fileData;
 }
 
-//https://www.radio-amater.rs/morsecodegenerator/ NOT COMPATIBLE CAR CODE DE FIN DIFFERENT
-//https://www.meridianoutpost.com/resources/etools/calculators/calculator-morse-code.php
-//https://morsecode.world/international/translator.html
-
 string MorseL::Wav::read_file(Config& cfg)
 {
-    string fpath = cfg.input; // à changer ancien
+    string fpath = cfg.input;
     
     vector<unsigned char> result = readFile(fpath);
 
-    int fsize = read_int(result, 4, 4);
-    int audformat = read_int(result, 20, 2);
+    //int fsize = read_int(result, 4, 4);
+    //int audformat = read_int(result, 20, 2);
     int nbrcan = read_int(result, 22, 2);
     int freq = read_int(result, 24, 4);
-    int bpsec = read_int(result, 28, 4);
-    int bpp = read_int(result, 32, 2);
+    //int bpsec = read_int(result, 28, 4);
+    //int bpp = read_int(result, 32, 2);
     int bpsample = read_int(result, 34, 2);
-    int datasize = read_int(result, 40, 4);
-    //cout << fsize << " " << audformat << " " << nbrcan << " " << freq << " " << freq << " " << bpsec << " " << bpp << " " << bpsample << " " << datasize << endl;
+    //int datasize = read_int(result, 40, 4);
     
-
     if (nbrcan > 1)
       throw runtime_error("Nombre de canaux non compatible");
 
-    //chercher temps entre 0...
-    //commence à 44
-    int delta = 44;
-    int nbz = 0;
-    bool write = false;
-    int incr = bpsample/8;
-    //cout << "incr " << incr << endl;
+    int delta = 44; // taille du header
+    int incr = bpsample/8; // taille d'un sample en octets
+    double duration = (double)result.size()/(double)incr/(double)freq; // durée totale du fichier audio
+    int max_amplitude = (int)pow(2, bpsample - 1); 
 
-    double duration = (double)result.size()/(double)incr/(double)freq;
+    vector<vector<double>> tzero = {}; // stocke les vecteurs de la forme { durée du silence, temps à la fin du silence }
+    double ti = -1; // temps d'un ti (détecté par minimum)
 
-    vector<vector<double>> tzero = {};
-    //cout << "ok" << endl;
-    double ti = -1;
-    int nbt = 10;
-    int max_amplitude = (int)pow(2,bpsample - 1 ); 
+    int nbz = 0; // nombre de zéros/max à la suite
+    bool write = false; // variable mémoire pour savoir si le nombre de zéros/max est significatif
+    int nbt = 10; // critère pour définir quand une série de zéros/max est significative
     for (long unsigned int i = delta; i < result.size(); i+=incr)
     {
         int z = read_int(result, i, incr);
-        //if (i < 100)
-        //cout << z << " ";
+        double tps = (double)nbz/(double)freq; // Temps du silence actuel
 
-        double tps = (double)nbz/(double)freq;
+        if (tps > (double)nbt/freq)
+            write = true;
 
-        if (tps > (double)nbt/(freq)) // deux périodes sinon critère de Shannon !
-        { 
-          write = true;
-        }
-
-        if ((z==0) || (z==-(max_amplitude)))
-        {
-          nbz++;
-        }
+        if ((z == 0) || (z == -(max_amplitude))) // selon les conventions des fichiers audios
+            nbz++;
         else
         {
-          nbz=0;//800 hz : période 1/800*
-          if (write)
-          {
-            double curtps = (double)i/(double)incr/(double)freq;
-            if ((ti < 0) || (tps < ti))
-              ti = tps; 
-            //cout << tps << endl;
-            //cout << curtps << endl;
-            //cout << endl;
-            tzero.push_back({tps, curtps }); //bug avec pair ??
-            write = false;
-          }
+            nbz = 0;
+            if (write)
+            {
+                double curtps = (double)i/(double)incr/(double)freq; // Current time
+                if ((ti < 0) || (tps < ti)) // Recherche du minimum
+                    ti = tps;       
+
+                tzero.push_back({tps, curtps });
+                write = false;
+            }
         }
     }
-    if (write)    // dépend si termine sur un zero ou non, cf https://morsecode.world/international/decoder/audio-decoder-adaptive.html
+
+    if (write) // ne pas oublier le dernier silence, s'il est significatif
     {          
         double tps = (double)nbz/(double)freq;      
         double curtps = (double)result.size()/(double)incr/(double)freq;
-            tzero.push_back({tps, curtps }); 
+        tzero.push_back({ tps, curtps }); 
     }
-    //cout << "ok" << endl;
-    //tzero.push_back({0, (double)result.size()/(double)incr/(double)freq }); 
-    //le dernier mettre des zéros ?    
 
-    //cout << tzero.size() << endl;
-    
-    //cout << "base duration " << ti << endl; // "volume"
-    //cout << max_amplitude << endl;
-    //cout << ti << endl;
-
-    vector<int> morse = {};
-    double tlast = 0;
+    vector<int> morse = {}; // contient les caractères morses sous forme d'un entier
+    double tlast = 0; // temps de la fin du dernier silence
     for (long unsigned int i = 0; i < tzero.size(); i++)
     {
-      morse.push_back(round((tzero[i][1]-tzero[i][0]-tlast)/ti));
-      morse.push_back(-round((tzero[i][0])/ti));
-      tlast = tzero[i][1];
+        morse.push_back(round((tzero[i][1]-tzero[i][0]-tlast)/ti)); // ajout lettre
+        morse.push_back(-round((tzero[i][0])/ti)); // ajout silence
+
+        tlast = tzero[i][1];
     }
-    //ajout dernière lettre
-    morse.push_back(round((duration-tlast)/ti));
+    morse.push_back(round((duration-tlast)/ti)); // ajout dernière lettre, au besoin
 
     string output = "";
     for (long unsigned int i = 0; i < morse.size(); i++)
     {
-      //cout << morse[i] << " " << endl;
-      switch (morse[i]) // vérifier lesquels utils
-      {
-          case 6:
-          case 1:
-          case 2:
-          case 14:
-          output.append("."); //TODO in conf file ? faire last long, last court
-          break;
+        if (cfg.wav["wav.debug"])
+            cout << morse[i] << " ";
 
-          case 16:
-          case 3:
-          case 4:
-          output.append("-");
-          break;
+        switch (morse[i])
+        {
+            case 1:
+            output.append(".");
+            break;
 
-          case -13:
-          case -5:
-          case -3:
-          output.append(" ");
-          break;
+            case 3:
+            output.append("-");
+            break;
 
-          case -14:
-          case -38:
-          case -7:
-          output.append("/");
-          break;
-      }
+            case -3:
+            case -13: // https://www.meridianoutpost.com/resources/etools/calculators/calculator-morse-code.php
+            output.append(" ");
+            break;
+
+            case -7:
+            case -9: // https://www.radio-amater.rs/morsecodegenerator/
+            case -38: // https://www.meridianoutpost.com/resources/etools/calculators/calculator-morse-code.php
+            output.append("/");
+            break;
+        }
     }
-    // détection automatique ? min1, min2, max1, max2 des valeurs
-    //cout << output << endl;
+
+    if (cfg.wav["wav.debug"])
+        cout << endl;
+
     return output;
-    //cout << endian_swap(buffToInteger(fsize)) << endl;
 }

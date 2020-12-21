@@ -20,12 +20,30 @@ string MorseL::Encoder::encode_text(Config& cfg)
 {     
     string ch = cfg.input;    
     std::transform(ch.begin(), ch.end(), ch.begin(), [](unsigned char c){ return std::tolower(c); });
+    if (cfg.wav["wav.debug"])
+        cout << cfg.input << " -> " << ch << endl;
 
     string output = cfg.data_e["begin"] + " / ";
 
-    for (auto it = ch.cbegin() ; it != ch.cend(); ++it)
+    for (size_t i = 0; i < ch.length();) // gérer l'UTF-8
     {
-        string its(1, *it);
+        string its = "";
+
+        int cplen = 1;
+        if ((ch[i] & 0xf8) == 0xf0) 
+            cplen = 4;
+        else if ((ch[i] & 0xf0) == 0xe0) 
+            cplen = 3;
+        else if ((ch[i] & 0xe0) == 0xc0)
+            cplen = 2;            
+        if ((i + cplen) > ch.length())
+            cplen = 1;
+
+        its = ch.substr(i, cplen);
+        i += cplen;
+
+        if (cfg.wav["wav.debug"])
+            cout << its << " ";
 
         if (cfg.data_e.find(its) == cfg.data_e.end())
         {
@@ -42,6 +60,8 @@ string MorseL::Encoder::encode_text(Config& cfg)
             output.append(" ");
         }
     }
+    if (cfg.wav["wav.debug"])
+        cout << endl;
 
     output.append("/ " + cfg.data_e["end"]);
     output = Utils::string_replace(output, " / ", "/");
