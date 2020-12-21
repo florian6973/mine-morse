@@ -33,13 +33,13 @@ int main(int argc, char** argv)
             cout << de2 << endl; 
 
             
-            en2 = Wav::readfile(argv[0], "sample2.wav");
+            en2 = Wav::readfile(argv[0], "sample9.wav");
             de2 = dcd.decode(en2);
             cout << de2 << endl;
 
-            en2 = Wav::readfile(argv[0], "sample.wav");
-            de2 = dcd.decode(en2);
-            cout << de2 << endl; 
+            //en2 = Wav::readfile(argv[0], "sample.wav");
+            //de2 = dcd.decode(en2);
+            //cout << de2 << endl; 
         }
         else
         {

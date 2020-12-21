@@ -10,6 +10,7 @@
 #include <cstring>
 #include <vector>
 #include <algorithm>
+#include <iterator>
 
 using namespace std;
 
@@ -171,58 +172,76 @@ int read_int(const vector<char>& vec, int r, const int size)
     return a;
 }
 
-/*int read_int(const vector<char>& vec, int r, const int size)
+template <typename T>
+T extract(const vector<unsigned char> &v, int pos)
 {
-    vector<char> buffer;
+  T value;
+  memcpy(&value, &v[pos], sizeof(T));
+  return value;
+}
+
+int read_int(const vector<unsigned char>& vec, int r, const int size)
+{
+    vector<unsigned char> buffer;
     for (int i = r; i < (r+size); i++)
       buffer.push_back(vec[i]);
     int a = 0;
-    if (size == 4)
+    //int a = *reinterpret_cast<const uint16_t*>(&buffer[0]);
+    switch (size)
     {
-    a = static_cast<int>(static_cast<unsigned char>(buffer[0]) << 24 |
-        static_cast<unsigned char>(buffer[1]) << 16 | 
-        static_cast<unsigned char>(buffer[2]) << 8 | 
-        static_cast<unsigned char>(buffer[3]));
-    }
-    else if (size == 2)
-    {
-    a = static_cast<int>(static_cast<unsigned char>(buffer[0]) << 8 | 
-        static_cast<unsigned char>(buffer[1]));
+      case 1:
+        a = extract<int8_t>(buffer, 0);
+        break;
+      case 2:
+        a = extract<short>(buffer, 0);
+        break;
+      case 4:
+        a = extract<int>(buffer, 0);
+        break;
+      default:
+        throw runtime_error("Taille de bloc non prise en compte");
     }
     return a;
+}
+
+/*int read_int(const vector<BYTE>& vec, int r, const int size)
+{
+    vector<char> fsize;
+    for (int i = r; i < (r+size); i++)
+      fsize.push_back(vec[i]);
+    int a = 0;
+    memcpy( &a, fsize.data(), sizeof( int ) );
+    return a;
 }*/
+
+typedef unsigned char BYTE;
+
+std::vector<BYTE> readFile(const string& filename)
+{
+    // open the file:
+    std::streampos fileSize;
+    std::ifstream file(filename, std::ios::binary | std::ios::ate);
+
+    // get its size:
+    file.seekg(0, std::ios::end);
+    fileSize = file.tellg();
+    file.seekg(0, std::ios::beg);
+
+    // read the data:
+    std::vector<BYTE> fileData(fileSize);
+    file.read((char*) &fileData[0], fileSize);
+    return fileData;
+}
+
+//https://www.radio-amater.rs/morsecodegenerator/ NOT COMPATIBLE CAR CODE DE FIN DIFFERENT
+//https://www.meridianoutpost.com/resources/etools/calculators/calculator-morse-code.php
+//https://morsecode.world/international/translator.html
 
 string MorseL::Wav::readfile(char* exec, const string& filepath)
 {
     string path = Utils::get_path(string(exec), filepath); // à changer ancien
     
-    //unsigned short array[2]={ox20ac,0x20bc};
-// End of RAII block. This will close the stream.
-    std::ifstream inFile;
-    //uint64_t myuint = 0xFFFF;
-    inFile.open(path, std::ios::in|ios::binary|ios::ate); // sans ate segmentation fault ?
-    inFile.unsetf(std::ios::skipws);
-if (!inFile)
-{
-  throw runtime_error("Ne peut pas lire");
-}
-    inFile.seekg(0, std::ios::end);
-    ifstream::pos_type pos = inFile.tellg();
-    std::vector<char>  result(pos);
-
-    //std::vector<unsigned char> result(std::istreambuf_iterator<char>(inFile), {});
-    inFile.seekg(0, ios::beg);
-    inFile.read(&result[0], pos);
-    if (inFile)
-      std::cout << "all characters read successfully.";
-    else
-      std::cout << "error: only " << inFile.gcount() << " could be read"  ;
-
-
-    inFile.close();
-    //for (int i = 0; i < 8; i++)
-    //  cout << result[i];
-    //cout << endl;
+    vector<unsigned char> result = readFile(path);
 
     int fsize = read_int(result, 4, 4);
     int audformat = read_int(result, 20, 2);
@@ -240,23 +259,28 @@ if (!inFile)
     int nbz = 0;
     bool write = false;
     int incr = bpsample/8;
+    cout << "incr " << incr << endl;
 
     double duration = (double)result.size()/(double)incr/(double)freq;
 
     vector<vector<double>> tzero = {};
-
-    for (int i = delta; i < result.size(); i+=incr)
+    //cout << "ok" << endl;
+    double ti = -1;
+    int max_amplitude = (int)pow(2,bpsample - 1 ); 
+    for (long unsigned int i = delta; i < result.size(); i+=incr)
     {
-        int z = read_int(result, i, 2);
+        int z = read_int(result, i, incr);
+        //if (z> 120)
+        //cout << z << " ";
 
         double tps = (double)nbz/(double)freq;
 
-        if (tps > (double)2/(freq)) // deux périodes sinon critère de Shannon !
+        if (tps > (double)4/(freq)) // deux périodes sinon critère de Shannon !
         { 
           write = true;
         }
 
-        if (z==0)
+        if ((z==0) || (z==-(max_amplitude)))
         {
           nbz++;
         }
@@ -266,6 +290,8 @@ if (!inFile)
           if (write)
           {
             double curtps = (double)i/(double)incr/(double)freq;
+            if ((ti < 0) || (tps < ti))
+              ti = tps; 
             //cout << tps << endl;
             //cout << curtps << endl;
             //cout << endl;
@@ -274,20 +300,19 @@ if (!inFile)
           }
         }
     }
+    //cout << "ok" << endl;
     //tzero.push_back({0, (double)result.size()/(double)incr/(double)freq }); 
     //le dernier mettre des zéros ?    
 
     //cout << tzero.size() << endl;
-
-    double ti = (*std::min_element(begin(tzero), end(tzero), [](auto lhs, auto rhs) {
-  return lhs[0] < rhs[0];
-}))[0];
-    cout << "base duration" << ti << endl;
+    
+    cout << "base duration " << ti << endl; // "volume"
+    cout << max_amplitude << endl;
     //cout << ti << endl;
 
     vector<int> morse = {};
     double tlast = 0;
-    for (int i = 0; i < tzero.size(); i++)
+    for (long unsigned int i = 0; i < tzero.size(); i++)
     {
       morse.push_back(round((tzero[i][1]-tzero[i][0]-tlast)/ti));
       morse.push_back(-round((tzero[i][0])/ti));
@@ -297,19 +322,32 @@ if (!inFile)
     morse.push_back(round((duration-tlast)/ti));
 
     string output = "";
-    for (int i = 0; i < morse.size(); i++)
+    for (long unsigned int i = 0; i < morse.size(); i++)
     {
-      switch (morse[i])
+      cout << morse[i] << " " << endl;
+      switch (morse[i]) // vérifier lesquels utils
       {
+          case 6:
           case 1:
-          output.append(".");
+          case 2:
+          case 14:
+          output.append("."); //TODO in conf file ?
           break;
+
+          case 16:
           case 3:
+          case 4:
           output.append("-");
           break;
+
+          case -13:
+          case -5:
           case -3:
           output.append(" ");
           break;
+
+          case -14:
+          case -38:
           case -7:
           output.append("/");
           break;
