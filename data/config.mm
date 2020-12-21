@@ -14,7 +14,10 @@ wav.ti¤1
 wav.ta¤3
 wav.espaceinter¤1
 wav.espacelettre¤3
+wav.espacelettre2¤13
 wav.espacemot¤7
+wav.espacemot2¤9
+wav.espacemot3¤38
 
 wav.debug¤0
 
@@ -89,5 +92,5 @@ $¤...-..-
 ï¤---...
 
 begin¤.-.-
-paragraphe¤-...-
+paragraphe¤-...--...-
 end¤...-.-

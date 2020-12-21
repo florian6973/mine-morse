@@ -244,27 +244,15 @@ string MorseL::Wav::read_file(Config& cfg)
         if (cfg.wav["wav.debug"])
             cout << morse[i] << " ";
 
-        switch (morse[i])
-        {
-            case 1:
+        int mi = morse[i];
+        if (mi == cfg.wav["wav.ti"])
             output.append(".");
-            break;
-
-            case 3:
+        else if (mi == cfg.wav["wav.ta"])
             output.append("-");
-            break;
-
-            case -3:
-            case -13: // https://www.meridianoutpost.com/resources/etools/calculators/calculator-morse-code.php
+        else if ((mi == -cfg.wav["wav.espacelettre"]) || (mi == -cfg.wav["wav.espacelettre2"])) // https://www.meridianoutpost.com/resources/etools/calculators/calculator-morse-code.php
             output.append(" ");
-            break;
-
-            case -7:
-            case -9: // https://www.radio-amater.rs/morsecodegenerator/
-            case -38: // https://www.meridianoutpost.com/resources/etools/calculators/calculator-morse-code.php
-            output.append("/");
-            break;
-        }
+        else if ((mi == -cfg.wav["wav.espacemot"]) || (mi == -cfg.wav["wav.espacemot2"]) || (mi == -cfg.wav["wav.espacemot3"])) // https://www.meridianoutpost.com/resources/etools/calculators/calculator-morse-code.php et // https://www.radio-amater.rs/morsecodegenerator/
+            output.append("/");        
     }
 
     if (cfg.wav["wav.debug"])
