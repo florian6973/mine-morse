@@ -8,5 +8,16 @@ using namespace std;
 using namespace MorseL;
 using namespace MorseL::Utils;
 
-int main(int argc, char** argv);
+namespace MorseC
+{
+    void help();
+    void init_config(Config& conf, int argc, char** argv);
+    void morse_trad(Config& conf);
+    bool file_exists(const std::string& name);
+    
+    Color::Modifier red(Color::FG_RED);
+    Color::Modifier green(Color::FG_GREEN);
+    Color::Modifier def(Color::FG_DEFAULT);    
+}
 
+int main(int argc, char** argv);

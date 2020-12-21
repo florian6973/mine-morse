@@ -5,15 +5,15 @@
 #include <algorithm>
 #include <iostream>
 #include <exception>
+#include <iterator>
 
 MorseL::Config::Config()
 {}
 
-MorseL::Config::Config(char* exec, string file) : _file(Utils::get_path(string(exec), file))
-{ cout << "Fichier de configuration : " << _file << endl;}
-
-void MorseL::Config::read()
+void MorseL::Config::read(string file)
 {
+    string _file = Utils::get_path(prog, file);
+
     ifstream cFile (_file);
 
     if (cFile.is_open())
@@ -22,8 +22,7 @@ void MorseL::Config::read()
 
         while(getline(cFile, line))
         {
-            line.erase(remove_if(line.begin(), line.end(), ::isspace),
-                                 line.end());
+            line.erase(remove_if(line.begin(), line.end(), ::isspace), line.end());
 
             if(line[0] == '#' || line.empty())
                 continue;
@@ -33,25 +32,16 @@ void MorseL::Config::read()
             auto name = line.substr(0, delimiterPos);
             auto value = line.substr(delimiterPos + delimiter.length());
 
-            //cout << name << " " << value << endl;
-
             data_e[name] = value;
             data_d[value] = name;
-            //data.insert(pair<string, string>(name, value));
         }
 
         cFile.close();
     }
     else
     {
-        throw runtime_error("Impossible d'ouvrir le fichier '" + _file + "' !");
+        throw runtime_error("Impossible d'ouvrir le fichier de configuration '" + _file + "' !");
     }
 }
-
-void MorseL::Config::save()
-{    
-    throw runtime_error("Non implémenté !");
-}
-
 MorseL::Config::~Config()
 {}

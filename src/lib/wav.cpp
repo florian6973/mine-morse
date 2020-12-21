@@ -26,11 +26,56 @@ std::string int_to_hex( T i )
 
 namespace little_endian_io
 {
+  std::vector<unsigned char> intToBytes(int value, int size)
+{
+    std::vector<unsigned char> result;
+
+    for (int i = 2*size; i > 0; i--)
+    {
+      if (i != 1)
+      result.push_back((value >> 8*i) & 0xFF);
+      else
+      {
+        result.push_back(value & 0xFF);
+      }
+      
+    }
+    /*if (size <= 2)
+    {
+    result.push_back(value >> 24);
+    result.push_back(value >> 16);
+    if (size <= 1)
+    {
+    result.push_back(value >>  8);
+    result.push_back(value      );
+    }
+    }
+    else
+    throw runtime_error("Entier " + to_string(size) + " non prévu");*/
+    return result;
+}
   template <typename Word>
-  std::ostream& write_word( std::ostream& outs, Word value, unsigned size = sizeof( Word ) )
+  std::ostream& write_word( std::ostream& outs, Word value, unsigned size = sizeof( Word ) ) // only int
   {
-    for (; size; --size, value >>= 8)
-      outs.put( static_cast <char> (value & 0xFF) );
+    char* a_begin = reinterpret_cast<char*>(&value);
+    char* a_end = a_begin + size;
+
+    //cout << size << "-" << value <<endl;
+
+    vector<char> chars;
+
+    copy(a_begin, a_end, back_inserter(chars));
+
+    //copy(chars.begin(), chars.end(), ostream_iterator<int>(cout, ", "));
+
+    for (long unsigned int i = 0; i < chars.size(); i++)
+      outs.write(&chars[i], sizeof(char));
+
+    //unsigned char* array = intToBytes(value, size).data();
+    //outs.write((char *)&array[0], sizeof(array));
+    
+    //for (; size; --size, value >>= 8)
+    //  outs.put( static_cast <char> (value & 0xFF) );
     return outs;
   }
 }
@@ -41,7 +86,7 @@ void write(ostream& f, bool vide, double seconds, int hz, int bps)
 {
   constexpr double two_pi = 6.283185307179586476925286766559;
   double max_amplitude = pow(2,bps - 1 );  // "volume"
-  double frequency = 400*2;  // A
+  double frequency = 400;  // A
 
   int N = hz * seconds;  // total number of samples
   for (int n = 0; n < N; n++)
@@ -50,8 +95,10 @@ void write(ostream& f, bool vide, double seconds, int hz, int bps)
       write_word( f, 0, bps/8 ); // problème of size
     else
     {
-      double amplitude = (double)n / N * max_amplitude;
-      double value     = sin( (two_pi * n * frequency) / hz );
+      double amplitude = (double)n / N * max_amplitude; //pourquoi ça ?
+      //double amplitude = max_amplitude;
+      double value     = cos( (two_pi * n * frequency) / hz );
+      //cout << "writing" << (int)(amplitude  * value) << endl;
       write_word( f, (int)(amplitude  * value), bps/8 ); // problème of size
     }
     //write_word( f, (int)((max_amplitude - amplitude) * value), 2 );
@@ -60,20 +107,26 @@ void write(ostream& f, bool vide, double seconds, int hz, int bps)
   }
 }
 
-void MorseL::Wav::writefile(char* exec, const string& filepath, const string& msg, const int& wpm)
+// peut être décodé en ligne
+
+void MorseL::Wav::write_file(Config& cfg, const string& msg)
 {
-    string path = Utils::get_path(string(exec), filepath); // à changer ancien
+    //string path = Utils::get_path(string(exec), filepath); // à changer ancien
+    int wpm=20;
+    string fpath = cfg.output;
+    if (fpath == "")
+      throw runtime_error("Un fichier de sortie (.wav) doit être spécifié !");
     
     //unsigned short array[2]={ox20ac,0x20bc};
 // End of RAII block. This will close the stream.
     std::fstream f;
     //uint64_t myuint = 0xFFFF;
-    f.open(path, ios::in | ios::out | ios::binary | ios:: trunc);
+    f.open(fpath, ios::in | ios::out | ios::binary | ios:: trunc);
 
-   
-  int hz        = 44100; //baisser qualité ?
-  int bps = 16; // multiple de 8
-  int nbchan = 1;
+   int nbbytes=  2;
+  int hz        = 11050; //baisser qualité ?
+  int bps = nbbytes*8; // multiple de 8
+  int nbchan = 1; //seulement une chaine prévue
   f << "RIFF----WAVEfmt ";     // (chunk size to be filled in later)
   write_word( f,     16, 4 );  // no extension data
   write_word( f,      1, 2 );  // PCM - integer samples
@@ -94,6 +147,7 @@ void MorseL::Wav::writefile(char* exec, const string& filepath, const string& ms
    double d_ti = 60.0/((double)wpm*50.0); //mot PARIS et non CODEX (60) //pourquoi 1200 ?
   //cout << d_ti << endl;
 bool wordprec = false;
+          //write(f, true, d_ti, hz, bps);
  for(long unsigned int i = 0; i<msg.length(); i++) {
       //cout << msg.at(i) << endl; //get character at position i
       //cout << msg.at(i);
@@ -140,9 +194,9 @@ bool wordprec = false;
 
     f.close();
 
-    cout << (file_length - 8) << endl;
-    cout << (file_length - data_chunk_pos + 8) << endl;
-    cout << "fichier écrit " << path << endl;
+    //cout << (file_length - 8) << endl;
+    //cout << (file_length - data_chunk_pos + 8) << endl;
+    //cout << "fichier écrit " << path << endl;
 }
 
 /*void endian_swap(unsigned int& x)
@@ -237,11 +291,11 @@ std::vector<BYTE> readFile(const string& filename)
 //https://www.meridianoutpost.com/resources/etools/calculators/calculator-morse-code.php
 //https://morsecode.world/international/translator.html
 
-string MorseL::Wav::readfile(char* exec, const string& filepath)
+string MorseL::Wav::read_file(Config& cfg)
 {
-    string path = Utils::get_path(string(exec), filepath); // à changer ancien
+    string fpath = cfg.input; // à changer ancien
     
-    vector<unsigned char> result = readFile(path);
+    vector<unsigned char> result = readFile(fpath);
 
     int fsize = read_int(result, 4, 4);
     int audformat = read_int(result, 20, 2);
@@ -251,31 +305,36 @@ string MorseL::Wav::readfile(char* exec, const string& filepath)
     int bpp = read_int(result, 32, 2);
     int bpsample = read_int(result, 34, 2);
     int datasize = read_int(result, 40, 4);
-    cout << fsize << " " << audformat << " " << nbrcan << " " << freq << " " << freq << " " << bpsec << " " << bpp << " " << bpsample << " " << datasize << endl;
+    //cout << fsize << " " << audformat << " " << nbrcan << " " << freq << " " << freq << " " << bpsec << " " << bpp << " " << bpsample << " " << datasize << endl;
     
+
+    if (nbrcan > 1)
+      throw runtime_error("Nombre de canaux non compatible");
+
     //chercher temps entre 0...
     //commence à 44
     int delta = 44;
     int nbz = 0;
     bool write = false;
     int incr = bpsample/8;
-    cout << "incr " << incr << endl;
+    //cout << "incr " << incr << endl;
 
     double duration = (double)result.size()/(double)incr/(double)freq;
 
     vector<vector<double>> tzero = {};
     //cout << "ok" << endl;
     double ti = -1;
+    int nbt = 10;
     int max_amplitude = (int)pow(2,bpsample - 1 ); 
     for (long unsigned int i = delta; i < result.size(); i+=incr)
     {
         int z = read_int(result, i, incr);
-        //if (z> 120)
+        //if (i < 100)
         //cout << z << " ";
 
         double tps = (double)nbz/(double)freq;
 
-        if (tps > (double)4/(freq)) // deux périodes sinon critère de Shannon !
+        if (tps > (double)nbt/(freq)) // deux périodes sinon critère de Shannon !
         { 
           write = true;
         }
@@ -300,14 +359,20 @@ string MorseL::Wav::readfile(char* exec, const string& filepath)
           }
         }
     }
+    if (write)    // dépend si termine sur un zero ou non, cf https://morsecode.world/international/decoder/audio-decoder-adaptive.html
+    {          
+        double tps = (double)nbz/(double)freq;      
+        double curtps = (double)result.size()/(double)incr/(double)freq;
+            tzero.push_back({tps, curtps }); 
+    }
     //cout << "ok" << endl;
     //tzero.push_back({0, (double)result.size()/(double)incr/(double)freq }); 
     //le dernier mettre des zéros ?    
 
     //cout << tzero.size() << endl;
     
-    cout << "base duration " << ti << endl; // "volume"
-    cout << max_amplitude << endl;
+    //cout << "base duration " << ti << endl; // "volume"
+    //cout << max_amplitude << endl;
     //cout << ti << endl;
 
     vector<int> morse = {};
@@ -324,14 +389,14 @@ string MorseL::Wav::readfile(char* exec, const string& filepath)
     string output = "";
     for (long unsigned int i = 0; i < morse.size(); i++)
     {
-      cout << morse[i] << " " << endl;
+      //cout << morse[i] << " " << endl;
       switch (morse[i]) // vérifier lesquels utils
       {
           case 6:
           case 1:
           case 2:
           case 14:
-          output.append("."); //TODO in conf file ?
+          output.append("."); //TODO in conf file ? faire last long, last court
           break;
 
           case 16:
@@ -353,7 +418,8 @@ string MorseL::Wav::readfile(char* exec, const string& filepath)
           break;
       }
     }
-    cout << output << endl;
+    // détection automatique ? min1, min2, max1, max2 des valeurs
+    //cout << output << endl;
     return output;
     //cout << endian_swap(buffToInteger(fsize)) << endl;
 }

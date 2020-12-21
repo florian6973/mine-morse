@@ -8,11 +8,7 @@ namespace MorseL
     class Encoder
     {
     public:
-        Encoder(Config cfg);
-        ~Encoder();
-
-        string encode(const string& str);
-    private:
-        Config _cfg;
+        static string encode_file(Config& cfg);
+        static string encode_text(Config& cfg);
     };
 }

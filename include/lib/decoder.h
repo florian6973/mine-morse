@@ -12,6 +12,8 @@ namespace MorseL
         ~Decoder();
 
         string decode(const string& str);
+
+        static string decode(Config& cfg, const string& str);
     private:
         Config _cfg;
     };

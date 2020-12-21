@@ -2,7 +2,6 @@
 
 #include <string>
 #include <map>
-#include <iterator> 
 
 using namespace std;
 
@@ -11,15 +10,16 @@ namespace MorseL
     class Config
     {
         public:
-            Config(); //for default member class
-            Config(char* exec, string file);
+            Config();
             ~Config();
-            void read();
-            void save();
+            void read(string file);
 
             map<string, string> data_e = {};
             map<string, string> data_d = {};
-        private:
-            string _file = "";
+
+            bool enc = false;
+            string prog = "";
+            string input = "";
+            string output = "";
     };
 }

@@ -1,3 +1,4 @@
+#include "lib/config.h"
 #include "lib/utils.h"
 
 namespace MorseL
@@ -5,8 +6,8 @@ namespace MorseL
     class Wav
     {
     public:
-        static void writefile(char* exec, const string& filepath, const string& msg, const int& wpm=20);
-        static string readfile(char* exec, const string& filepath);
+        static void write_file(Config& cfg, const string& msg);
+        static string read_file(Config& cfg);
     };
 }
 
