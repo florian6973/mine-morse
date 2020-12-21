@@ -12,9 +12,9 @@ Utilisation des outils :
 
 Utiliser `make` dans le répertoire principal. Le programme console est alors `bin/mine-morse_c`.
 
-## Utilisation
+## Documentation
 
-Le programme console affiche par défaut l'aide, qui indique comment l'utiliser. Le fichier de configuration est `data/config.mm`.
+Le programme console affiche par défaut l'aide, qui indique comment l'utiliser. Le fichier de configuration est, si besoin, `data/config.mm`.
 
 ## Tests
 

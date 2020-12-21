@@ -2,6 +2,7 @@ CXX=g++
 CXXFLAGS=-std=c++2a -Wall -O3 -Iinclude
 CXXFLAGSDEBUG=-std=c++2a -Wall -ggdb -Iinclude
 AR=/usr/bin/ar -r
+WAIT=echo "Appuyez pour continuer" && read _
 
 srcl := $(shell find src/lib -type f -name *.cpp)
 objl := $(subst src, obj, $(srcl:.cpp=.o))
@@ -12,8 +13,7 @@ objc := $(subst src, obj, $(srcc:.cpp=.o))
 .PHONY: directories
 
 all: directories bin/mine-morse.a bin/mine-morse_c
-
-ar: all run
+	@echo "Compilation réussie !"
 
 bin/mine-morse_c: ${objc} bin/mine-morse.a
 	@echo "Compilation du programme console"
@@ -52,23 +52,36 @@ clean:
 	rm -rf test/str*_d.txt
 	@echo "\nNettoyé"
 
-test:
-	@echo "Tests du programme\n"
-	@echo "\tTest d'encodage/décodage local\n"
-	bin/mine-morse_c enc test/str04.txt test/str01.wav
+test: all
+	@echo "TESTS DU PROGRAMME\n"
+	@echo "\tENCODAGE / DECODAGE LOCAL\n"
+	bin/mine-morse_c enc test/str01.txt test/str01.wav
+	@$(WAIT)
 	bin/mine-morse_c dec test/str01.wav test/str01_d.txt
+	@$(WAIT)
 	bin/mine-morse_c enc test/str02.txt test/str02.wav
+	@$(WAIT)
 	bin/mine-morse_c dec test/str02.wav test/str02_d.txt
-	@echo "\tAutre type de passage de paramètres\n"
-	bin/mine-morse_c enc "Argument en ligne de commande" test/str03.wav
-	bin/mine-morse_c dec test/str03.wav
-	
-	@echo "\tTest de décodage de MORSE généré en ligne\n"
-	bin/mine-morse_c dec test/site01_a.wav
-	bin/mine-morse_c dec test/site01_b.wav
-	bin/mine-morse_c dec test/site02_a.wav
-	bin/mine-morse_c dec test/site02_b.wav
-	bin/mine-morse_c dec test/site03_a.wav
-	bin/mine-morse_c dec test/site03_b.wav
+	@$(WAIT)
 
-	@echo "\tVous pouvez essayer de décoder un fichier généré par ce programme à l'aide d'un site web (lien dans le README.md), par exemple avec test/str02.wav"
+	@echo "\tVARIATIONS DES PARAMETRES\n"
+	bin/mine-morse_c enc "Argument en ligne de commande" test/str03.wav
+	@$(WAIT)
+	bin/mine-morse_c dec test/str03.wav
+	@$(WAIT)
+	
+	@echo "\tTEST DE DECODAGE DU MORSE GENERE EN LIGNE\n"
+	bin/mine-morse_c dec test/site01_a.wav
+	@$(WAIT)
+	bin/mine-morse_c dec test/site01_b.wav
+	@$(WAIT)
+	bin/mine-morse_c dec test/site02_a.wav
+	@$(WAIT)
+	bin/mine-morse_c dec test/site02_b.wav
+	@$(WAIT)
+	bin/mine-morse_c dec test/site03_a.wav
+	@$(WAIT)
+	bin/mine-morse_c dec test/site03_b.wav
+	@$(WAIT)
+
+	@echo "\n\n\tVous pouvez essayer de décoder un fichier généré par ce programme à l'aide d'un site web (lien dans le README.md), par exemple avec test/str02.wav"

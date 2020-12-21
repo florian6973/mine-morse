@@ -16,7 +16,7 @@ wav.espaceinter¤1
 wav.espacelettre¤3
 wav.espacemot¤7
 
-wav.debug¤1
+wav.debug¤0
 
 a¤.-
 b¤-...
