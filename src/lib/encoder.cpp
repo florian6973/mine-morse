@@ -52,7 +52,7 @@ string MorseL::Encoder::encode_text(Config& cfg)
             else if (its == "\n")
                 output.append(cfg.data_e["paragraphe"] + " ");
             else
-                throw runtime_error("Caractère '" + its + "' non trouvé !"); //TODO bonne exception
+                throw runtime_error("Caractère '" + its + "' non trouvé !");
         } 
         else 
         {
